@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package grpc_server;
+
+option go_package = "server/internal/grpc_server/proto";
+
+
+message Empty {}
+
+message RegisterRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message RegisterResponse {
+    string token = 1;
+}
+
+message AuthenticateRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message AuthenticateResponse {
+    string token = 1;
+}
+
+message ListResponse {
+    repeated string unitname = 1;
+}
+
+message ReadRequest {
+    string unitname = 1;
+}
+
+message ReadResponse {
+    bytes unitdata = 1;
+}
+
+message WriteRequest {
+    string unitname = 1;
+    bytes unitdata = 2;
+}
+
+message DeleteRequest {
+    string unitname = 1;
+}
+
+service Gophkeeper {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+    rpc List(Empty) returns (ListResponse);
+    rpc Read(ReadRequest) returns (ReadResponse);
+    rpc Write(WriteRequest) returns (Empty);
+    rpc Delete(DeleteRequest) returns (Empty);
+}
