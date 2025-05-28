@@ -14,13 +14,20 @@ type Unit struct {
 
 // UnitKey - ключ единицы данных
 type UnitKey struct {
-	UserID   string
+	UserID   int
 	UnitName string
 }
 
 // UnitMeta - метаданные единицы данных
 type UnitMeta struct {
-	Type       string
+	Type       int
 	DataSK     string
 	UploadedAt time.Time
 }
+
+const (
+	UnitTypeLogin  = 1
+	UnitTypeText   = 2
+	UnitTypeBinary = 3
+	UnitTypeCard   = 4
+)
