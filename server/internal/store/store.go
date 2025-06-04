@@ -9,6 +9,7 @@ import (
 	"github.com/iurnickita/gophkeeper/server/internal/model"
 	"github.com/iurnickita/gophkeeper/server/internal/store/config"
 	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Store интерфейс хранилище

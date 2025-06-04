@@ -72,7 +72,7 @@ func (a *auth) Login(ctx context.Context, login string, password string) (string
 // AuthUnaryInterceptor прослойка аутентификации для gRPC хендлеров
 func (a *auth) AuthUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	// Обход для регистрации/входа
-	if info.FullMethod == "/grpc_server.Gophkeeper/Register" || info.FullMethod == "/grpc_server.Gophkeeper/Authenticate" {
+	if info.FullMethod == "/gophkeeper.Gophkeeper/Register" || info.FullMethod == "/gophkeeper.Gophkeeper/Authenticate" {
 		return handler(ctx, req)
 	}
 

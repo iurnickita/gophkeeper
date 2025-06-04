@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	pb "github.com/iurnickita/gophkeeper/contract/proto"
 	"github.com/iurnickita/gophkeeper/server/internal/auth"
-	pb "github.com/iurnickita/gophkeeper/server/internal/grpc_server/proto"
 	"github.com/iurnickita/gophkeeper/server/internal/grpc_server/server/config"
 	"github.com/iurnickita/gophkeeper/server/internal/model"
 	"github.com/iurnickita/gophkeeper/server/internal/service"
@@ -139,12 +139,3 @@ func Serve(cfg config.Config, auth auth.Auth, gophkeeper service.Service, zaplog
 	}
 	return nil
 }
-
-// Установка grpc
-// https://grpc.io/docs/languages/go/quickstart/
-
-// Генерация go-файлов для grpc сервиса
-// cd internal/grpc_server
-// protoc --go_out=. --go_opt=paths=source_relative \
-// --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-// proto/server.proto

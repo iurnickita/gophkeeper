@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: proto/server.proto
+// source: proto/gophkeeper.proto
 
 package proto
 
@@ -19,12 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Gophkeeper_Register_FullMethodName     = "/grpc_server.Gophkeeper/Register"
-	Gophkeeper_Authenticate_FullMethodName = "/grpc_server.Gophkeeper/Authenticate"
-	Gophkeeper_List_FullMethodName         = "/grpc_server.Gophkeeper/List"
-	Gophkeeper_Read_FullMethodName         = "/grpc_server.Gophkeeper/Read"
-	Gophkeeper_Write_FullMethodName        = "/grpc_server.Gophkeeper/Write"
-	Gophkeeper_Delete_FullMethodName       = "/grpc_server.Gophkeeper/Delete"
+	Gophkeeper_Register_FullMethodName     = "/gophkeeper.Gophkeeper/Register"
+	Gophkeeper_Authenticate_FullMethodName = "/gophkeeper.Gophkeeper/Authenticate"
+	Gophkeeper_List_FullMethodName         = "/gophkeeper.Gophkeeper/List"
+	Gophkeeper_Read_FullMethodName         = "/gophkeeper.Gophkeeper/Read"
+	Gophkeeper_Write_FullMethodName        = "/gophkeeper.Gophkeeper/Write"
+	Gophkeeper_Delete_FullMethodName       = "/gophkeeper.Gophkeeper/Delete"
 )
 
 // GophkeeperClient is the client API for Gophkeeper service.
@@ -278,7 +278,7 @@ func _Gophkeeper_Delete_Handler(srv interface{}, ctx context.Context, dec func(i
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Gophkeeper_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "grpc_server.Gophkeeper",
+	ServiceName: "gophkeeper.Gophkeeper",
 	HandlerType: (*GophkeeperServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -307,5 +307,5 @@ var Gophkeeper_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/server.proto",
+	Metadata: "proto/gophkeeper.proto",
 }

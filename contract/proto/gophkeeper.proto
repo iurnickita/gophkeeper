@@ -1,9 +1,8 @@
 syntax = "proto3";
 
-package grpc_server;
+package gophkeeper;
 
-option go_package = "server/internal/grpc_server/proto";
-
+option go_package = "github.com/iurnickita/gophkeeper/contract/proto";
 
 message Empty {}
 
@@ -34,12 +33,14 @@ message ReadRequest {
 }
 
 message ReadResponse {
-    bytes unitdata = 1;
+    int32 unittype = 1;
+    bytes unitdata = 2;
 }
 
 message WriteRequest {
     string unitname = 1;
-    bytes unitdata = 2;
+    int32 unittype = 2;
+    bytes unitdata = 3;
 }
 
 message DeleteRequest {
