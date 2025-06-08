@@ -99,7 +99,7 @@ func (s *Server) Read(ctx context.Context, in *pb.ReadRequest) (*pb.ReadResponse
 			return &pb.ReadResponse{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	return &pb.ReadResponse{Unitdata: unit.Data}, nil
+	return &pb.ReadResponse{Unittype: int32(unit.Meta.Type), Unitdata: unit.Data}, nil
 }
 
 // Write

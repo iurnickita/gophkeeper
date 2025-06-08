@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/iurnickita/gophkeeper/server/internal/model"
 	"github.com/iurnickita/gophkeeper/server/internal/store/config"
@@ -20,8 +21,8 @@ type Store interface {
 	Read(ctx context.Context, userID int, unitName string) (model.Unit, error)
 	Write(ctx context.Context, unit model.Unit) error
 	Delete(ctx context.Context, userID int, unitName string) error
-	/* GetEncryptSK() ([]string, error)
-	SetEncryptSK(string) error */
+	GetEncryptSK(ctx context.Context) ([]string, error)
+	SetEncryptSK(ctx context.Context, sk string) error
 }
 
 var (
@@ -118,7 +119,7 @@ func (s *psqlStore) Write(ctx context.Context, unit model.Unit) error {
 			"VALUES ($1, $2, $3, $4, $5, $6)",
 		unit.Key.UserID,
 		unit.Key.UnitName,
-		unit.Meta.UploadedAt,
+		time.Now(),
 		unit.Meta.Type,
 		unit.Meta.DataSK,
 		unit.Data)
@@ -138,6 +139,46 @@ func (s *psqlStore) Write(ctx context.Context, unit model.Unit) error {
 // Delete implements Store.
 func (s *psqlStore) Delete(ctx context.Context, userID int, unitName string) error {
 	panic("unimplemented")
+}
+
+// GetEncryptSK
+func (s *psqlStore) GetEncryptSK(ctx context.Context) ([]string, error) {
+	rows, err := s.database.QueryContext(ctx,
+		"SELECT body"+
+			" FROM encryption_sk")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	if rows.Err() != nil {
+		return nil, err
+	}
+	var keys []string
+	for rows.Next() {
+		var key string
+		err := rows.Scan(&key)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	if rows.Err() != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+// SetEncryptSK
+func (s *psqlStore) SetEncryptSK(ctx context.Context, sk string) error {
+	_, err := s.database.ExecContext(ctx,
+		"INSERT INTO encryption_sk (body)"+
+			" VALUES ($1)",
+		sk)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewStore создает объект хранилища
@@ -165,9 +206,19 @@ func NewStore(cfg config.Config) (Store, error) {
 			" unitname VARCHAR (20) NOT NULL," +
 			" uploadedat TIMESTAMP NOT NULL," +
 			" type SMALLINT NOT NULL," +
-			" datask VARCHAR (100) NOT NULL," +
+			" datask VARCHAR (400) NOT NULL," +
 			" data BYTEA NOT NULL," +
 			" PRIMARY KEY (userid, unitname)" +
+			" );")
+	if err != nil {
+		return nil, err
+	}
+
+	// Таблица промежуточных(постоянных) паролей
+	_, err = db.Exec(
+		"CREATE TABLE IF NOT EXISTS encryption_sk (" +
+			" id SERIAL PRIMARY KEY," +
+			" body VARCHAR (400)" +
 			" );")
 	if err != nil {
 		return nil, err

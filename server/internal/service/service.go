@@ -21,9 +21,10 @@ type Service interface {
 
 // service реализация сервиса
 type service struct {
-	cfg    config.Config
-	store  store.Store
-	zaplog *zap.Logger
+	cfg     config.Config
+	store   store.Store
+	crypter aesgcm.Crypter
+	zaplog  *zap.Logger
 }
 
 // List implements Service.
@@ -46,7 +47,7 @@ func (s service) Read(ctx context.Context, userID int, unitName string) (model.U
 	s.zaplog.Sugar().Debug(unit)
 
 	// Дешифрование
-	decrUnit, err := aesgcm.UnitDecrypt(unit)
+	decrUnit, err := s.crypter.UnitDecrypt(unit)
 	if err != nil {
 		return model.Unit{}, err
 	}
@@ -62,7 +63,7 @@ func (s service) Write(ctx context.Context, unit model.Unit) error {
 	s.zaplog.Sugar().Debug(unit)
 
 	// Шифрование
-	encrUnit, err := aesgcm.UnitEncrypt(unit)
+	encrUnit, err := s.crypter.UnitEncrypt(unit)
 	if err != nil {
 		return err
 	}
@@ -83,11 +84,12 @@ func (s service) Delete(ctx context.Context, userID int, unitName string) error 
 }
 
 // NewService создает объект сервиса
-func NewService(cfg config.Config, store store.Store, zaplog *zap.Logger) (Service, error) {
+func NewService(cfg config.Config, store store.Store, crypter aesgcm.Crypter, zaplog *zap.Logger) (Service, error) {
 	service := service{
-		cfg:    cfg,
-		store:  store,
-		zaplog: zaplog}
+		cfg:     cfg,
+		store:   store,
+		crypter: crypter,
+		zaplog:  zaplog}
 
 	return &service, nil
 }

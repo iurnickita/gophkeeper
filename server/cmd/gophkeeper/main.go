@@ -5,6 +5,7 @@ import (
 
 	"github.com/iurnickita/gophkeeper/server/internal/auth"
 	"github.com/iurnickita/gophkeeper/server/internal/config"
+	"github.com/iurnickita/gophkeeper/server/internal/crypto/aesgcm"
 	grpcserver "github.com/iurnickita/gophkeeper/server/internal/grpc_server/server"
 	"github.com/iurnickita/gophkeeper/server/internal/logger"
 	"github.com/iurnickita/gophkeeper/server/internal/service"
@@ -35,7 +36,12 @@ func run() error {
 		return err
 	}
 
-	service, err := service.NewService(cfg.Service, store, zaplog)
+	crypter, err := aesgcm.NewCrypter(cfg.Crypter, store)
+	if err != nil {
+		return err
+	}
+
+	service, err := service.NewService(cfg.Service, store, crypter, zaplog)
 	if err != nil {
 		return err
 	}

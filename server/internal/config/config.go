@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 
+	crypterConfig "github.com/iurnickita/gophkeeper/server/internal/crypto/aesgcm/config"
 	grpcServerConig "github.com/iurnickita/gophkeeper/server/internal/grpc_server/server/config"
 	loggerConfig "github.com/iurnickita/gophkeeper/server/internal/logger/config"
 	serviceConfig "github.com/iurnickita/gophkeeper/server/internal/service/config"
@@ -16,6 +17,7 @@ type Config struct {
 	GRPCServer grpcServerConig.Config
 	Service    serviceConfig.Config
 	Store      storeConfig.Config
+	Crypter    crypterConfig.Config
 	Logger     loggerConfig.Config
 }
 
@@ -37,6 +39,8 @@ func GetConfig() Config {
 
 	// По умолчанию на момент разработки
 	cfg.Store.DBDsn = "host=localhost user=bob password=bob dbname=gophkeeper sslmode=disable"
+	cfg.Crypter.MasterSK = "cb459063d4bbbd4ce04a7c5b6e8121e7933630bada8fcb3abc20f6ca0aba3793"
+	cfg.Crypter.NewSKIntervalD = 30
 	cfg.Logger.LogLevel = "debug"
 
 	return cfg
