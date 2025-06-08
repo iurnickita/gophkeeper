@@ -104,7 +104,7 @@ type cliHandler struct {
 func (h cliHandler) register(cmd *cobra.Command, args []string) {
 	err := h.service.Register(args[0], args[1])
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 	fmt.Fprintln(os.Stdout, "OK")
@@ -114,7 +114,7 @@ func (h cliHandler) register(cmd *cobra.Command, args []string) {
 func (h cliHandler) login(cmd *cobra.Command, args []string) {
 	err := h.service.Login(args[0], args[1])
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 	fmt.Fprintln(os.Stdout, "OK")
@@ -130,11 +130,11 @@ func (h cliHandler) list(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stdout, err.Error())
 		default:
 			// Ошибка
-			fmt.Fprint(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			return
 		}
 	}
-	fmt.Fprint(os.Stdout, list)
+	fmt.Fprintln(os.Stdout, list)
 }
 
 // Read
@@ -147,11 +147,11 @@ func (h cliHandler) read(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stdout, err.Error())
 		default:
 			// Ошибка
-			fmt.Fprint(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			return
 		}
 	}
-	fmt.Fprint(os.Stdout, unit)
+	fmt.Fprintln(os.Stdout, unit)
 }
 
 // Write
@@ -159,7 +159,7 @@ func (h cliHandler) write(cmd *cobra.Command, args []string) {
 	// Формирование dataunit
 	unittype, err := strconv.Atoi(args[1])
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 	unit := model.Unit{Name: args[0], Body: model.UnitBody{Meta: model.UnitMeta{Type: unittype}, Data: []byte(args[2])}}
@@ -167,7 +167,7 @@ func (h cliHandler) write(cmd *cobra.Command, args []string) {
 	// Запись
 	err = h.service.Write(unit)
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 	fmt.Fprintln(os.Stdout, "OK")
@@ -177,7 +177,7 @@ func (h cliHandler) write(cmd *cobra.Command, args []string) {
 func (h cliHandler) delete(cmd *cobra.Command, args []string) {
 	err := h.service.Delete(args[0])
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 	fmt.Fprintln(os.Stdout, "OK")

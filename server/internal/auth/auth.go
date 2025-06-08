@@ -22,7 +22,7 @@ type Key string
 
 const (
 	metadataUserToken string = "token"
-	contextUserID     Key    = "userID"
+	ContextUserID     Key    = "userID"
 )
 
 type auth struct {
@@ -94,7 +94,7 @@ func (a *auth) AuthUnaryInterceptor(ctx context.Context, req interface{}, info *
 			return nil, status.Errorf(codes.Unauthenticated, "%s Unauthenticated. Use Register procedure", info.FullMethod)
 		}
 		// Запись кода пользователя в контекст для дальнейшего использования
-		ctx = context.WithValue(ctx, contextUserID, userID)
+		ctx = context.WithValue(ctx, ContextUserID, userID)
 	}
 
 	return handler(ctx, req)

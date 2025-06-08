@@ -3,13 +3,12 @@ package grpcclient
 
 import (
 	"context"
-	"log"
 
 	"github.com/iurnickita/gophkeeper/client/internal/grpc_client/client/config"
 	"github.com/iurnickita/gophkeeper/client/internal/model"
+	gophTLS "github.com/iurnickita/gophkeeper/client/internal/tls"
 	pb "github.com/iurnickita/gophkeeper/contract/proto"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -119,10 +118,15 @@ func (c Client) Close() {
 
 // NewClient создает grpc-клиент
 func NewClient(cfg config.Config) (Client, error) {
-	// устанавливаем соединение с сервером
-	conn, err := grpc.NewClient(":3200", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tlsCredentials, err := gophTLS.LoadTLSCredentials()
 	if err != nil {
-		log.Fatal(err)
+		return Client{}, err
+	}
+
+	// устанавливаем соединение с сервером
+	conn, err := grpc.NewClient(":3200", grpc.WithTransportCredentials(tlsCredentials))
+	if err != nil {
+		return Client{}, err
 	}
 	// получаем переменную интерфейсного типа ShortenerClient,
 	// через которую будем отправлять сообщения

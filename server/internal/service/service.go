@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 
+	"github.com/iurnickita/gophkeeper/server/internal/crypto/aesgcm"
 	"github.com/iurnickita/gophkeeper/server/internal/model"
 	"github.com/iurnickita/gophkeeper/server/internal/service/config"
 	"github.com/iurnickita/gophkeeper/server/internal/store"
@@ -30,18 +31,46 @@ func (s service) List(ctx context.Context, userID int) ([]string, error) {
 	return s.store.List(ctx, userID)
 }
 
-// Read implements Service.
+// Read читает единицу данных
 func (s service) Read(ctx context.Context, userID int, unitName string) (model.Unit, error) {
+	s.zaplog.Sugar().Debug("inbound unitname")
+	s.zaplog.Sugar().Debug(unitName)
+
+	// Чтение
 	unit, err := s.store.Read(ctx, userID, unitName)
+	if err != nil {
+		s.zaplog.Error(err.Error())
+		return model.Unit{}, err
+	}
+	s.zaplog.Sugar().Debug("read unit")
+	s.zaplog.Sugar().Debug(unit)
+
+	// Дешифрование
+	decrUnit, err := aesgcm.UnitDecrypt(unit)
 	if err != nil {
 		return model.Unit{}, err
 	}
-	return unit, nil
+	s.zaplog.Sugar().Debug("decrypted unit")
+	s.zaplog.Sugar().Debug(decrUnit)
+
+	return decrUnit, nil
 }
 
-// Write implements Service.
+// Write записывает новую единицу данных
 func (s service) Write(ctx context.Context, unit model.Unit) error {
-	err := s.store.Write(ctx, unit)
+	s.zaplog.Sugar().Debug("inbound unit")
+	s.zaplog.Sugar().Debug(unit)
+
+	// Шифрование
+	encrUnit, err := aesgcm.UnitEncrypt(unit)
+	if err != nil {
+		return err
+	}
+	s.zaplog.Sugar().Debug("encrypted unit")
+	s.zaplog.Sugar().Debug(encrUnit)
+
+	// Запись
+	err = s.store.Write(ctx, encrUnit)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ package grpcserver
 import (
 	"context"
 	"net"
+	"strconv"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -12,6 +13,7 @@ import (
 
 	pb "github.com/iurnickita/gophkeeper/contract/proto"
 	"github.com/iurnickita/gophkeeper/server/internal/auth"
+	gophTLS "github.com/iurnickita/gophkeeper/server/internal/crypto/tls"
 	"github.com/iurnickita/gophkeeper/server/internal/grpc_server/server/config"
 	"github.com/iurnickita/gophkeeper/server/internal/model"
 	"github.com/iurnickita/gophkeeper/server/internal/service"
@@ -54,6 +56,7 @@ func (s *Server) Register(ctx context.Context, in *pb.RegisterRequest) (*pb.Regi
 			return &pb.RegisterResponse{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+	s.zaplog.Sugar().Debugf("register returns token: %s", token)
 	return &pb.RegisterResponse{Token: token}, nil
 }
 
@@ -68,6 +71,8 @@ func (s *Server) Authenticate(ctx context.Context, in *pb.AuthenticateRequest) (
 			return &pb.AuthenticateResponse{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+
+	s.zaplog.Sugar().Debugf("authenticate returns token: %s", token)
 	return &pb.AuthenticateResponse{Token: token}, nil
 }
 
@@ -79,7 +84,10 @@ func (s *Server) List(ctx context.Context, in *pb.Empty) (*pb.ListResponse, erro
 // Read
 func (s *Server) Read(ctx context.Context, in *pb.ReadRequest) (*pb.ReadResponse, error) {
 	// Код пользователя
-	var userID int
+	userID, err := strconv.Atoi(ctx.Value(auth.ContextUserID).(string))
+	if err != nil {
+		return &pb.ReadResponse{}, status.Error(codes.Internal, err.Error())
+	}
 
 	// Чтение единицы данных
 	unit, err := s.gophkeeper.Read(ctx, userID, in.Unitname)
@@ -97,11 +105,17 @@ func (s *Server) Read(ctx context.Context, in *pb.ReadRequest) (*pb.ReadResponse
 // Write
 func (s *Server) Write(ctx context.Context, in *pb.WriteRequest) (*pb.Empty, error) {
 	// Код пользователя
-	var userID int
+	userID, err := strconv.Atoi(ctx.Value(auth.ContextUserID).(string))
+	if err != nil {
+		return &pb.Empty{}, status.Error(codes.Internal, err.Error())
+	}
 
 	// Запись новой единицы данных
-	unit := model.Unit{Key: model.UnitKey{UserID: userID, UnitName: in.Unitname}}
-	err := s.gophkeeper.Write(ctx, unit)
+	var unit model.Unit
+	unit.Key = model.UnitKey{UserID: userID, UnitName: in.Unitname}
+	unit.Meta = model.UnitMeta{Type: int(in.Unittype)}
+	unit.Data = in.Unitdata
+	err = s.gophkeeper.Write(ctx, unit)
 	if err != nil {
 		switch err {
 		case store.ErrAlreadyExists:
@@ -125,8 +139,16 @@ func Serve(cfg config.Config, auth auth.Auth, gophkeeper service.Service, zaplog
 	if err != nil {
 		return err
 	}
+	// tls
+	tlsCredentials, err := gophTLS.LoadTLSCredentials()
+	if err != nil {
+		return err
+	}
+
 	// создаём gRPC-сервер
-	s := grpc.NewServer(grpc.UnaryInterceptor(auth.AuthUnaryInterceptor))
+	s := grpc.NewServer(
+		grpc.Creds(tlsCredentials),
+		grpc.UnaryInterceptor(auth.AuthUnaryInterceptor))
 	// создание обработчика
 	h := NewServer(cfg, auth, gophkeeper, zaplog)
 	// регистрируем сервис

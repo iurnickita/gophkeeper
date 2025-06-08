@@ -25,16 +25,19 @@ func GetConfig() Config {
 
 	// Флаги
 	flag.StringVar(&cfg.Store.DBDsn, "d", "", "database dsn")
+	flag.StringVar(&cfg.Logger.LogLevel, "l", "info", "log level")
 
 	// Переменные окружения
 	if envdsn := os.Getenv("DATABASE_URI"); envdsn != "" {
 		cfg.Store.DBDsn = envdsn
 	}
-
-	// По умолчанию
-	if cfg.Store.DBDsn == "" {
-		cfg.Store.DBDsn = "host=localhost user=bob password=bob dbname=gophkeeper sslmode=disable"
+	if envlevel := os.Getenv("LOG_LEVEL"); envlevel != "" {
+		cfg.Logger.LogLevel = envlevel
 	}
+
+	// По умолчанию на момент разработки
+	cfg.Store.DBDsn = "host=localhost user=bob password=bob dbname=gophkeeper sslmode=disable"
+	cfg.Logger.LogLevel = "debug"
 
 	return cfg
 }

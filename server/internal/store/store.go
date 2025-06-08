@@ -20,6 +20,8 @@ type Store interface {
 	Read(ctx context.Context, userID int, unitName string) (model.Unit, error)
 	Write(ctx context.Context, unit model.Unit) error
 	Delete(ctx context.Context, userID int, unitName string) error
+	/* GetEncryptSK() ([]string, error)
+	SetEncryptSK(string) error */
 }
 
 var (
@@ -163,7 +165,7 @@ func NewStore(cfg config.Config) (Store, error) {
 			" unitname VARCHAR (20) NOT NULL," +
 			" uploadedat TIMESTAMP NOT NULL," +
 			" type SMALLINT NOT NULL," +
-			" datask VARCHAR (30) NOT NULL," +
+			" datask VARCHAR (100) NOT NULL," +
 			" data BYTEA NOT NULL," +
 			" PRIMARY KEY (userid, unitname)" +
 			" );")

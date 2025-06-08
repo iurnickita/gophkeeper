@@ -12,6 +12,7 @@ import (
 
 	"github.com/iurnickita/gophkeeper/client/internal/cache/config"
 	"github.com/iurnickita/gophkeeper/client/internal/model"
+	"go.uber.org/zap"
 )
 
 // Cache - интерфейс кэша
@@ -37,10 +38,11 @@ const (
 )
 
 type cache struct {
-	cfg   config.Config
-	list  list
-	units units
-	token token
+	cfg    config.Config
+	list   list
+	units  units
+	token  token
+	logger *zap.Logger
 }
 
 type list struct {
@@ -64,12 +66,12 @@ type token struct {
 }
 
 // GetList возвращает список доступных данных
-func (c cache) GetList() ([]string, error) {
+func (c *cache) GetList() ([]string, error) {
 	return c.list.list, nil
 }
 
 // SyncList
-func (c cache) SyncList(serverList []string) error {
+func (c *cache) SyncList(serverList []string) error {
 	c.list.mux.Lock()
 	defer c.list.mux.Unlock()
 
@@ -79,7 +81,7 @@ func (c cache) SyncList(serverList []string) error {
 }
 
 // GetUnit
-func (c cache) GetUnit(unitName string) (model.Unit, error) {
+func (c *cache) GetUnit(unitName string) (model.Unit, error) {
 	c.units.mux.Lock()
 	defer c.units.mux.Unlock()
 	c.list.mux.Lock()
@@ -107,11 +109,14 @@ func (c cache) GetUnit(unitName string) (model.Unit, error) {
 }
 
 // SetUnit
-func (c cache) SetUnit(unit model.Unit) error {
+func (c *cache) SetUnit(unit model.Unit) error {
 	c.units.mux.Lock()
 	defer c.units.mux.Unlock()
 	c.list.mux.Lock()
 	defer c.list.mux.Unlock()
+
+	c.logger.Sugar().Debug("cache.SetUnit unit:")
+	c.logger.Sugar().Debug(unit)
 
 	// Установка даты действия
 	unit.Body.Meta.ValidUntil = time.Now().AddDate(0, 0, c.cfg.ValidPeriod)
@@ -124,7 +129,7 @@ func (c cache) SetUnit(unit model.Unit) error {
 }
 
 // DeleteUnit
-func (c cache) DeleteUnit(unitName string) error {
+func (c *cache) DeleteUnit(unitName string) error {
 	c.units.mux.Lock()
 	defer c.units.mux.Unlock()
 
@@ -138,18 +143,18 @@ func (c cache) DeleteUnit(unitName string) error {
 }
 
 // GetToken
-func (c cache) GetToken() string {
+func (c *cache) GetToken() string {
 	return c.token.token
 }
 
 // SetToken
-func (c cache) SetToken(token string) {
+func (c *cache) SetToken(token string) {
 	c.token.token = token
 	c.token.chg = true
 }
 
 // Close сохраняет данные и закрывает файлы
-func (c cache) Close() error {
+func (c *cache) Close() error {
 	err := c.saveList()
 	if err != nil {
 		return err
@@ -171,7 +176,7 @@ func (c cache) Close() error {
 }
 
 // saveList сохраняет список в файл
-func (c cache) saveList() error {
+func (c *cache) saveList() error {
 	// были изменения
 	if !c.list.chg {
 		return nil
@@ -179,6 +184,10 @@ func (c cache) saveList() error {
 
 	// перезапись файла
 	err := c.list.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = c.token.file.Seek(0, 0)
 	if err != nil {
 		return err
 	}
@@ -199,7 +208,7 @@ func (c cache) saveList() error {
 }
 
 // saveUnits сохраняет полезные данные в файл
-func (c cache) saveUnits() error {
+func (c *cache) saveUnits() error {
 	// были изменения
 	if !c.units.chg {
 		return nil
@@ -207,6 +216,10 @@ func (c cache) saveUnits() error {
 
 	// перезапись файла
 	err := c.units.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = c.token.file.Seek(0, 0)
 	if err != nil {
 		return err
 	}
@@ -232,7 +245,7 @@ func (c cache) saveUnits() error {
 }
 
 // saveToken сохраняет токен в файл
-func (c cache) saveToken() error {
+func (c *cache) saveToken() error {
 	// были изменения
 	if !c.token.chg {
 		return nil
@@ -243,9 +256,14 @@ func (c cache) saveToken() error {
 	if err != nil {
 		return err
 	}
+	_, err = c.token.file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
 	writer := bufio.NewWriter(c.token.file)
 	// записываем в буфер
-	if _, err := writer.Write([]byte(c.token.token)); err != nil {
+	_, err = writer.WriteString(c.token.token)
+	if err != nil {
 		return err
 	}
 	// записываем буфер в файл
@@ -254,7 +272,7 @@ func (c cache) saveToken() error {
 }
 
 // init подготавливает данные из файлов
-func (c cache) init() error {
+func (c *cache) init() error {
 	// Чтение списка
 	list, err := c.initList()
 	if err != nil {
@@ -278,62 +296,66 @@ func (c cache) init() error {
 }
 
 // initList чтение списка
-func (c cache) initList() (list, error) {
+func (c *cache) initList() (list, error) {
+	var l list
+
 	file, err := os.OpenFile(c.cfg.FileRepo+ListFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return list{}, err
 	}
 	scanner := bufio.NewScanner(file)
-	var list list
 	for scanner.Scan() {
-		list.list = append(list.list, string(scanner.Bytes()))
+		l.list = append(l.list, string(scanner.Bytes()))
 	}
-	list.mux = &sync.Mutex{}
-	list.file = file
-	return list, nil
+	l.mux = &sync.Mutex{}
+	l.file = file
+	return l, nil
 }
 
 // initUnits чтение полезных данных
-func (c cache) initUnits() (units, error) {
+func (c *cache) initUnits() (units, error) {
+	var u units
+	u.units = make(map[string]model.Unit)
+
 	file, err := os.OpenFile(c.cfg.FileRepo+UnitsFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return units{}, err
 	}
 	scanner := bufio.NewScanner(file)
 	var unit model.Unit
-	var units units
 	for scanner.Scan() {
 		if err := json.Unmarshal(scanner.Bytes(), &unit); err == nil {
-			units.units[unit.Name] = unit
+			u.units[unit.Name] = unit
 		}
 	}
-	units.mux = &sync.Mutex{}
-	units.file = file
-	return units, nil
+	u.mux = &sync.Mutex{}
+	u.file = file
+	return u, nil
 }
 
 // initToken чтение токена
-func (c cache) initToken() (token, error) {
+func (c *cache) initToken() (token, error) {
 	file, err := os.OpenFile(c.cfg.FileRepo+TokenFileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return token{}, err
 	}
-	var tokenByte []byte
-	_, err = file.Read(tokenByte)
-	if err != nil {
-		return token{}, err
-	}
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+	tokenString := scanner.Text()
+
 	var token token
-	token.token = string(tokenByte)
+	token.token = tokenString
 	token.file = file
 	return token, nil
 }
 
 // NewCache создает объект кэша
-func NewCache(cfg config.Config) (Cache, error) {
+func NewCache(cfg config.Config, logger *zap.Logger) (Cache, error) {
 	var cache cache
 	cache.cfg = cfg
+	cache.logger = logger
 	cache.init()
 
-	return cache, nil
+	return &cache, nil
 }

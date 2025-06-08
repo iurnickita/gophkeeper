@@ -7,6 +7,7 @@ import (
 	"github.com/iurnickita/gophkeeper/client/internal/cli"
 	"github.com/iurnickita/gophkeeper/client/internal/config"
 	grpcclient "github.com/iurnickita/gophkeeper/client/internal/grpc_client/client"
+	"github.com/iurnickita/gophkeeper/client/internal/logger"
 	"github.com/iurnickita/gophkeeper/client/internal/service"
 )
 
@@ -19,6 +20,12 @@ func main() {
 func run() error {
 	cfg := config.GetConfig()
 
+	// Лог
+	zaplog, err := logger.NewZapLog(cfg.Logger)
+	if err != nil {
+		return err
+	}
+
 	// Клиент
 	client, err := grpcclient.NewClient(cfg.GRPCClient)
 	if err != nil {
@@ -26,13 +33,13 @@ func run() error {
 	}
 
 	// Кэш
-	cache, err := cache.NewCache(cfg.Cache)
+	cache, err := cache.NewCache(cfg.Cache, zaplog)
 	if err != nil {
 		return err
 	}
 
 	// Логика
-	service, err := service.NewService(cfg.Service, client, cache)
+	service, err := service.NewService(cfg.Service, client, cache, zaplog)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,9 @@ import (
 	grpcclient "github.com/iurnickita/gophkeeper/client/internal/grpc_client/client"
 	"github.com/iurnickita/gophkeeper/client/internal/model"
 	"github.com/iurnickita/gophkeeper/client/internal/service/config"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -29,6 +32,7 @@ type service struct {
 	cfg    config.Config
 	client grpcclient.Client
 	cache  cache.Cache
+	logger *zap.Logger
 }
 
 // Register
@@ -37,6 +41,7 @@ func (s service) Register(login string, password string) error {
 	if err != nil {
 		return err
 	}
+	s.logger.Sugar().Debugf("register returns token: %s", token)
 	s.cache.SetToken(token)
 	return nil
 }
@@ -47,6 +52,7 @@ func (s service) Login(login string, password string) error {
 	if err != nil {
 		return err
 	}
+	s.logger.Sugar().Debugf("authenticate returns token: %s", token)
 	s.cache.SetToken(token)
 	return nil
 }
@@ -74,29 +80,47 @@ func (s service) List() ([]string, error) {
 // Read
 func (s service) Read(unitname string) (model.Unit, error) {
 	unit, err := s.client.Read(s.cache.GetToken(), unitname)
-	switch err {
-	case nil:
+	if err == nil {
 		// Вывод из сервера
 		s.cache.SetUnit(unit)
 		return unit, nil
-	default:
-		// Вывод из кэша
-		// тут надо отличать ошибку соединения от остальных
-		// case "connection_refused":
-		unit, err = s.cache.GetUnit(unitname)
-		if err != nil {
-			return model.Unit{}, nil
+	} else {
+		if e, ok := status.FromError(err); ok {
+			switch e.Code() {
+			case codes.Unavailable:
+				// Connection refused - вывод из кэша
+				unit, err = s.cache.GetUnit(unitname)
+				if err != nil {
+					return model.Unit{}, nil
+				}
+				return unit, ErrOffline
+			default:
+				return model.Unit{}, err
+			}
 		}
-		return unit, ErrOffline
+		return model.Unit{}, err
 	}
 }
 
 // Write
 func (s service) Write(unit model.Unit) error {
 	// Запись на сервер
+	s.logger.Sugar().Debug("Unit to write")
+	s.logger.Sugar().Debug(unit)
 	err := s.client.Write(s.cache.GetToken(), unit)
 	if err != nil {
-		return err
+		// Это надо убрать
+		// А на стороне сервера сделать перезапись
+		if e, ok := status.FromError(err); ok {
+			switch e.Code() {
+			case codes.AlreadyExists:
+				return err
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 	// Кэширование
 	err = s.cache.SetUnit(unit)
@@ -128,6 +152,6 @@ func (s service) Close() {
 }
 
 // NewService создает сервис
-func NewService(cfg config.Config, client grpcclient.Client, cache cache.Cache) (Service, error) {
-	return service{cfg: cfg, client: client, cache: cache}, nil
+func NewService(cfg config.Config, client grpcclient.Client, cache cache.Cache, logger *zap.Logger) (Service, error) {
+	return service{cfg: cfg, client: client, cache: cache, logger: logger}, nil
 }
